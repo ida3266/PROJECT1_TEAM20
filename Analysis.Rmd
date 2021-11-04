@@ -558,6 +558,28 @@ cbind(boruta_tree, rb_tree, f1b_tree)
 ```
 
 
+```{r}
+# renaming variables to be more readable for visualisation
+boruta_final_fixed <- TentativeRoughFix(boruta_result)
+boruta_final_vars <- getSelectedAttributes(boruta_final_fixed)
 
+tree_variables <- data.frame(biom_food_scaled %>% select(boruta_final_vars))
+
+clearer_names <- rename(data.frame(biom_food_scaled %>% select(boruta_final_vars)), c("BMISC" = "BMI", "AGEC" = "Age", "PHDCMWBC" = "Waist_circumference", "INCDEC" = "Equivalised_Income(deciles)", "DIABBC" = "Whether_has_diabetes_mellitus", "SEX" = "Sex", "SMKDAILY" = "Daily_smoker_status", "SMKSTAT" = "Smoker_status", "PROTEIN" = "Protein", "FIBRE" = "Dietary_Fibre", "PROVITA" = "Pro-vitamin_A", "RETEQV" = "Retinol_equivalents", "B1MG" = "Thiamin_(B1)", "B2MG" = "Riboflavin_(B2)", "B3MG" = "Niacin (B3)", "NIACINEQ" = "Niacin_equivalents", "CALMG" = "Calcium", "IRONMG" = "Iron", "MAGMG" = "Magnesium", "PHOSMG" = "Phosphorous", "POTASMG" = "Potassium", "SELUG" = "Selenium", "ZINCMG" = "Zinc", "SFAG" = "Saturated_fat", "MUFAG" = "Monounsaturated_fat", "LAG" = "Linoleic_acid"))
+
+tree_model_clearer <- rpart(biom_food_scaled$cvd_class ~., data = clearer_names, method = "class", model = TRUE)
+rpart.plot(tree_model_clearer)  
+
+# variables selected through boruta
+kbl(data.frame(boruta_final_vars, colnames(clearer_names)), 
+    col.names = c("Variables selected", "Description")) %>% 
+  kable_styling("striped", full_width = FALSE) %>% 
+  save_kable("var_selected.png")
+
+# table for variable significance
+kbl(tree_model_clearer$variable.importance, col.names = "Variable Importance") %>% 
+  kable_styling("striped", full_width = FALSE) %>%
+  save_kable("var_importance.png")
+```
 
 
