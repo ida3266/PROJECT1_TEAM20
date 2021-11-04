@@ -1,0 +1,68 @@
+---
+title: "Analysis"
+author: "Team 20"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+# Default knitting options
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE) 
+
+options(warn=-1) 
+
+# Suppress start up warnings when loading libraries
+library <- function(...) {
+  suppressPackageStartupMessages(base::library(...))
+}
+```
+
+```{r}
+# load in all libraries
+library(MLmetrics)
+library(rpart)
+library(sparsediscrim)
+library(glmnet)
+library(Hmisc)
+library(forcats)
+library(e1071)
+library(Amelia)
+library(Boruta)
+library(mice)
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+library(stringr)
+library(tidyr)
+library(summarytools)
+library(caret)
+library(knitr)
+library(naniar)
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(rpart)
+library(rpart.plot)
+library(kableExtra)
+library(knitr)
+library(devtools)
+library(pheatmap)
+library(viridis)
+library(glmnet)
+library(flextable)
+library(Matrix)
+library(kableExtra)
+```
+
+
+
+
+
