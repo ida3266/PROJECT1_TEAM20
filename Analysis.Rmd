@@ -62,6 +62,501 @@ library(Matrix)
 library(kableExtra)
 ```
 
+```{r}
+# load technically correct data
+load("tech_data.Rdata")
+```
+
+```{r}
+# calculate CVD score and classify into 3 classes (high, medium, low) and filter age > 45
+is_smoke = function(SMKSTAT) {
+  if (SMKSTAT == 1 || SMKSTAT == 2 || SMKSTAT == 3) {
+    # smoking
+    return(1)
+  }
+  # not smoking
+  return(0)
+}
+
+is_diabet = function(DIABBC) {
+  if (DIABBC == 5) {
+    # not diabetes
+    return(0)
+  }
+  # diabetes
+  return(1)
+}
+
+female_cvd_score = function(age, hdl, chol, sbp_t, sbp_nt, smoke, diabet) {
+
+  score = 0
+
+  if (is_smoke(smoke)) {
+    score = score + 3
+  }
+
+  if (is_diabet(diabet)) {
+    score = score + 4
+  }
+
+  if (35 <= age && age <= 39) {
+    score = score + 2
+  } else if (40 <= age && age <= 44) {
+    score = score + 4
+  } else if (45 <= age && age <= 49) {
+    score = score + 5
+  } else if (50 <= age && age <= 54) {
+    score = score + 7
+  } else if (55 <= age && age <= 59) {
+    score = score + 8
+  } else if (60 <= age && age <= 64) {
+    score = score + 9
+  } else if (65 <= age && age <= 69) {
+    score = score + 10
+  } else if (70 <= age && age <= 74) {
+    score = score + 11
+  } else if (age >= 75) {
+    score = score + 12
+  }
+
+  if (hdl == 1 || hdl == 2 || hdl == 3) {
+    score = score + 2
+  } else if (hdl == 4) {
+    score = score + 1
+  }
+
+  # problem: chol == 4, 8
+  if (chol == 2 || chol == 3) {
+    score = score + 1
+  } else if (chol == 4) {
+    score = score + 2
+  } else if (chol == 5 || chol == 6) {
+    score = score + 3
+  } else if (chol == 7) {
+    score = score + 4
+  } else if (chol == 8) {
+    score = score + 5
+  }
+
+  # SBP treated
+  if (sbp_nt < 120) {
+    score = score - 3
+  } else if (120 <= sbp_nt && sbp_nt <= 129) {
+    score = score
+  } else if (130 <= sbp_nt && sbp_nt <= 139) {
+    score = score + 1
+  } else if (140 <= sbp_nt && sbp_nt <= 149) {
+    score = score + 2
+  } else if (150 <= sbp_nt && sbp_nt <= 159) {
+    score = score + 4
+  } else if (sbp_nt >= 160) {
+    score = score + 5
+  }
+
+  if (sbp_t < 120) {
+    score = score - 1
+  } else if (120 <= sbp_t && sbp_t <= 129) {
+    score = score + 2
+  } else if (130 <= sbp_t && sbp_t <= 139) {
+    score = score + 3
+  } else if (140 <= sbp_t && sbp_t <= 149) {
+    score = score + 5
+  } else if (150 <= sbp_t && sbp_t <= 159) {
+    score = score + 6
+  } else if (sbp_t >= 160) {
+    score = score + 7
+  }
+
+  return(score)
+}
+
+male_cvd_score = function(age, hdl, chol, sbp_t, sbp_nt, smoke, diabet) {
+
+  score = 0
+
+  if (is_smoke(smoke)) {
+    score = score + 4
+  }
+  if (is_diabet(diabet)) {
+    score = score + 3
+  }
+
+  if (35 <= age && age <= 39) {
+    score = score + 2
+  } else if (age <= 40 && age <= 44) {
+    score = score + 5
+  } else if (age <= 45 && age <= 49) {
+    score = score + 6
+  } else if (age <= 50 && age <= 54) {
+    score = score + 8
+  } else if (age <= 55 && age <= 59) {
+    score = score + 10
+  } else if (age <= 60 && age <= 64) {
+    score = score + 11
+  } else if (age <= 65 && age <= 69) {
+    score = score + 12
+  } else if (age <= 70 && age <= 74) {
+    score = score + 14
+  } else if (age >= 75) {
+    score = score + 15
+  }
+
+
+  if (hdl == 1 || hdl == 2 || hdl == 3) {
+    score = score + 2
+  } else if (hdl == 4) {
+    score = score + 1
+  }
+
+  # problem: chol == 4, 8
+  if (chol == 2 || chol == 3 || chol == 4) {
+    score = score + 1
+  } else if (chol == 5 || chol == 6) {
+    score = score + 2
+  } else if (chol == 7) {
+    score = score + 3
+  } else if (chol == 8) {
+    score = score + 4
+  }
+
+  # SBP treated
+  if (sbp_nt < 120) {
+    score = score - 2
+  } else if (120 <= sbp_nt && sbp_nt <= 129) {
+    score = score
+  } else if (130 <= sbp_nt && sbp_nt <= 139) {
+    score = score + 1
+  } else if (140 <= sbp_nt && sbp_nt <= 159) {
+    score = score + 2
+  } else if (sbp_nt >= 160) {
+    score = score + 3
+  }
+
+  if (sbp_t < 120) {
+    score = score
+  } else if (120 <= sbp_t && sbp_t <= 129) {
+    score = score + 2
+  } else if (130 <= sbp_t && sbp_t <= 139) {
+    score = score + 3
+  } else if (140 <= sbp_t && sbp_t <= 159) {
+    score = score + 4
+  } else if (sbp_t >= 160) {
+    score = score + 5
+  }
+
+  return(score)
+}
+
+cvd_score = function(sex, age, hdl, chol, sbp_t, sbp_nt, smoke, diabet) {
+  if (is.na(sex) || is.na(age) || is.na(hdl) || is.na(chol) || is.na(sbp_t) || is.na(sbp_nt) || is.na(smoke) || is.na(diabet))
+    return(NA)
+  if (sex == 1) {
+    return(male_cvd_score(age, hdl, chol, sbp_t, sbp_nt, smoke, diabet))
+  } else if (sex == 2) {
+    return(female_cvd_score(age, hdl, chol, sbp_t, sbp_nt, smoke, diabet))
+  }
+}
+
+cvd_wrapper = function(row) {
+  score = cvd_score(row["SEX"], row["AGEC"], row["HDLCHREB"], row["CHOLRESB"], row["SYSTOL"], row["SYSTOL"], row["SMKSTAT"], row["DIABBC"])
+
+  return(score)
+}
+
+# copy technically correct biom dataset into dat 
+dat = tech_biom
+
+# removing special values found in exercises variables
+miss_defs <- c("9996", "9999")
+dat <- dat %>%
+  naniar::replace_with_na(replace = list(EXLWTBC = miss_defs))
+
+dat$CVD_Point = apply(tech_biom, 1, cvd_wrapper)
+
+# how many 
+table(is.na(dat$CVD_Point))
+
+table(dat$CVD_Point)
+
+dat = dat %>% mutate(
+  cvd_risk = case_when(
+    SEX == 1 & CVD_Point <= -3 ~ 0,
+    SEX == 1 & CVD_Point == -2 ~ 1.1,
+    SEX == 1 & CVD_Point == -1 ~ 1.4,
+    SEX == 1 & CVD_Point == 0 ~ 1.6,
+    SEX == 1 & CVD_Point == 1 ~ 1.9,
+    SEX == 1 & CVD_Point == 2 ~ 2.3,
+    SEX == 1 & CVD_Point == 3 ~ 2.8,
+    SEX == 1 & CVD_Point == 4 ~ 3.3,
+    SEX == 1 & CVD_Point == 5 ~ 3.9,
+    SEX == 1 & CVD_Point == 6 ~ 4.7,
+    SEX == 1 & CVD_Point == 7 ~ 5.6,
+    SEX == 1 & CVD_Point == 8 ~ 6.7,
+    SEX == 1 & CVD_Point == 9 ~ 7.9,
+    SEX == 1 & CVD_Point == 10 ~ 9.4,
+    SEX == 1 & CVD_Point == 11 ~ 11.2,
+    SEX == 1 & CVD_Point == 12 ~ 13.2,
+    SEX == 1 & CVD_Point == 13 ~ 15.6,
+    SEX == 1 & CVD_Point == 14 ~ 18.4,
+    SEX == 1 & CVD_Point == 15 ~ 21.6,
+    SEX == 1 & CVD_Point == 16 ~ 25.3,
+    SEX == 1 & CVD_Point == 17 ~ 29.4,
+    SEX == 1 & CVD_Point >= 18 ~ 30.0,
+
+    SEX == 2 & CVD_Point <= -2 ~ 0,
+    SEX == 2 & CVD_Point == -1 ~ 1.0,
+    SEX == 2 & CVD_Point == 0 ~ 1.2,
+    SEX == 2 & CVD_Point == 1 ~ 1.5,
+    SEX == 2 & CVD_Point == 2 ~ 1.7,
+    SEX == 2 & CVD_Point == 3 ~ 2.0,
+    SEX == 2 & CVD_Point == 4 ~ 2.4,
+    SEX == 2 & CVD_Point == 5 ~ 2.8,
+    SEX == 2 & CVD_Point == 6 ~ 3.3,
+    SEX == 2 & CVD_Point == 7 ~ 3.9,
+    SEX == 2 & CVD_Point == 8 ~ 4.5,
+    SEX == 2 & CVD_Point == 9 ~ 5.3,
+    SEX == 2 & CVD_Point == 10 ~ 6.3,
+    SEX == 2 & CVD_Point == 11 ~ 7.3,
+    SEX == 2 & CVD_Point == 12 ~ 8.6,
+    SEX == 2 & CVD_Point == 13 ~ 10.0,
+    SEX == 2 & CVD_Point == 14 ~ 11.7,
+    SEX == 2 & CVD_Point == 15 ~ 13.7,
+    SEX == 2 & CVD_Point == 16 ~ 15.9,
+    SEX == 2 & CVD_Point == 17 ~ 18.5,
+    SEX == 2 & CVD_Point == 18 ~ 21.5,
+    SEX == 2 & CVD_Point == 19 ~ 24.8,
+    SEX == 2 & CVD_Point == 20 ~ 18.5,
+    SEX == 2 & CVD_Point >= 21 ~ 30,
+  )
+)
+
+dat = dat %>% mutate(cvd_class = case_when(
+  cvd_risk > 19 ~ 3,
+  cvd_risk < 10 ~ 1,
+  cvd_risk >= 10 & cvd_risk <= 19 ~ 2))
+
+dat <- dat %>% filter(AGEC >= 45, !is.na(cvd_class))
+dat$cvd_class <- as.factor(dat$cvd_class)
+```
+
+```{r}
+# handle variables from food dataset in grams
+food_gram_cols <- na.omit(types_food[str_detect(types_food$description, "g$|\\(g\\)$"),]$variable_name)
+food_gram_cols <- intersect(food_gram_cols, colnames(tech_food))
+food_gram <- tech_food %>% select(ABSPID, all_of(food_gram_cols))
+food_gram_median <- food_gram %>% group_by(ABSPID) %>% summarise_all(median)
+```
+
+```{r}
+# join biom datasest and modified food dataset
+biom_food_cleaned <- dat %>%
+  left_join(food_gram_median, by = "ABSPID")
+
+# remove redundant information, blood test variables and useless variables
+biom_food_cleaned <- biom_food_cleaned %>%
+  select(-c("ABSPID", "CVD_Point", "cvd_risk", "HCHOLBC", "HSUGBC", "HYPBC", "DIASTOL", "FEMLSBC", "ALTNTR", "ALTRESB", "APOBNTR","APOBRESB", "B12RESB", "BIORESPC", "CHOLNTR", "CHOLRESB", "CVDMEDST", "DIAHBRSK", "FASTSTAD", "FOLATREB", "GGTNTR", "GGTRESB", "HBA1PREB", "HDLCHREB", "LDLNTR", "LDLRESB", "TRIGNTR", "TRIGRESB", "SYSTOL", "GLUCFPD", "GLUCFREB" )) %>%
+  select(-contains("MISS"))
+
+# remove constant variables
+biom_food_cleaned <- biom_food_cleaned %>%
+  remove_constant()
+
+# remove low variance/near to zero variance variables
+biom_food_cleaned <- biom_food_cleaned[-nearZeroVar(biom_food_cleaned)]
+
+# visualize missing values in our complete joined dataset
+miss_table <- miss_var_summary(biom_food_cleaned)
+miss_table$pct_miss <- round(miss_table$pct_miss, 2)
+DT::datatable(miss_table)
+
+# remove DIETQ14 and DIETQ12 due to high missingness
+biom_food_cleaned <- biom_food_cleaned %>% select(-c(DIETQ12, DIETQ14))
+
+# drop obs with NA 
+biom_food_cleaned <- drop_na(biom_food_cleaned)
+
+# remove height and weight that is not needed
+biom_food_cleaned <- biom_food_cleaned %>% select(-PHDKGWBC, -PHDCMHBC)
+
+# visualize skewness of data
+skew_before_log <- sort(unlist(lapply(biom_food_cleaned %>% select_if(is.numeric), skewness)), decreasing = TRUE)
+skew_before_log_df <- data.frame(variable = names(skew_before_log), skewness = unname(skew_before_log))
+p_skew_before <- ggplot(data = skew_before_log_df, aes(x = variable, y = skewness)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs( x = "Variable Names", y = "Skewness",
+  title ="Skewness of Numerical Variables Before Log Transform",
+  caption = "")
+p_skew_before
+
+# log transformation
+biom_food_log <- biom_food_cleaned %>% mutate_if(is.numeric, function(x){return (x + 1)}) %>% mutate_if(is.numeric, log)
+
+# record mean and sd for later models (to be used in standardization)
+biom_food_mean <- data.frame(unlist(lapply(biom_food_log %>% select_if(is.numeric), mean)))
+biom_food_sd <- data.frame(unlist(lapply(biom_food_log %>% select_if(is.numeric), sd)))
+
+biom_food_scaled <- biom_food_log %>% mutate_if(is.numeric, scale) # log transform and normalize
+
+sum(unlist(lapply(biom_food_scaled %>% select_if(is.numeric), skewness)))
+
+# remove highly correlated variables
+cor_90 <- findCorrelation(cor(biom_food_scaled %>% select_if(is.numeric)), names = TRUE)
+biom_food_scaled <- biom_food_scaled %>% select(-all_of(cor_90))
+```
+
+```{r}
+# extract variables for each dataset for later use
+food_vars <- intersect(colnames(food_gram_median), colnames(biom_food_cleaned))
+biom_vars <- setdiff(colnames(biom_food_scaled), food_vars) #including cvd_class
+fra_vars <- c("AGEC", "SEX", "DIABBC", "SMKSTAT")
+```
+
+```{r}
+set.seed(123) # set seed
+
+cvK <- 10  # number of CV folds
+X <- data.matrix(biom_food_scaled%>% select(-cvd_class))
+y <- biom_food_scaled$cvd_class
+cvSets <- cvTools::cvFolds(nrow(X), cvK)  # permute all the data, into 5 folds
+boruta_knn <- boruta_svm <- boruta_rf <- boruta_tree <- full_knn <- full_svm <- full_rf <- full_tree <- fra_knn <- fra_svm <- fra_rf <- fra_tree<- NA  # initialise results vector
+f1b_knn <- f1b_svm <- f1b_rf <- f1b_tree <- f1_knn <- f1_svm <- f1_rf <- f1_tree <- f1f_knn <- f1f_svm <- f1f_rf <- f1f_tree <- NA  # initialise results vector
+rb_knn <- rb_svm <- rb_rf <- rb_tree <- r_knn <- r_svm <- r_rf <- r_tree <- rf_knn <- rf_svm <- rf_rf <- rf_tree <- NA  # initialise results vector
+
+# 10-fold cross validation (with and without boruta feature selection)
+for (j in 1:cvK) {
+  fold_time <-Sys.time()
+  
+  test_id <- cvSets$subsets[cvSets$which == j]
+  X_test <- X[test_id, ]
+  X_train <- X[-test_id, ]
+  y_test <- y[test_id]
+  y_train <- y[-test_id]
+  
+  # upsampling training set
+  # X_train <- upSample(X_train, y_train, list = FALSE, yname = "y_train")
+  # y_train <- X_train$y_train
+  # X_train <- X_train %>% select(-y_train)
+  
+  # boruta subsets
+  boruta <- Boruta(y_train~., data = data.frame(cbind(X_train, y_train)), maxRuns = 150, doTrace = 1)
+  boruta_fixed <- TentativeRoughFix(boruta)
+  boruta_vars <- getSelectedAttributes(boruta_fixed)
+  boruta_train <- data.frame(X_train) %>% select(boruta_vars, all_of(fra_vars))
+  boruta_test <- data.frame(X_test) %>% select(boruta_vars, all_of(fra_vars))
+  
+  fra_train <- data.frame(X_train) %>% select(all_of(fra_vars))
+  fra_test <- data.frame(X_test) %>% select(all_of(fra_vars))
+  
+  # knn
+  knn_model <- class::knn(train = boruta_train, test = boruta_test, cl = y_train)
+  full_knn_model <- class::knn(train = X_train, test = X_test, cl = y_train)
+  fra_knn_model <- class::knn(train = fra_train, test = fra_test, cl = y_train)
+  
+  # svm
+  svm_model <- svm(
+  x = data.matrix(boruta_train),
+  y = y_train,
+  type = "C",
+  kernel = "radial")
+  full_svm_model <- svm(
+  x = data.matrix(X_train),
+  y = y_train,
+  type = "C",
+  kernel = "radial")
+  fra_svm_model <- svm(
+  x = data.matrix(fra_train),
+  y = y_train,
+  type = "C",
+  kernel = "radial")
+  
+  # random forest
+  rf_model <- randomForest::randomForest(
+  x = boruta_train,
+  y = as.factor(y_train),
+  random_state = 123
+  )
+  full_rf_model <- randomForest::randomForest(
+  x = X_train,
+  y = as.factor(y_train),
+  random_state = 123
+  )
+  fra_rf_model <- randomForest::randomForest(
+  x = fra_train,
+  y = as.factor(y_train),
+  random_state = 123
+  )
+  
+  # decision tree
+  tree_model <- rpart(y_train ~., data = data.frame(cbind(boruta_train, y_train)), method = "class", model = TRUE)
+  full_tree_model <- rpart(y_train ~., data = data.frame(cbind(X_train, y_train)), method = "class", model = TRUE)
+  fra_tree_model <- rpart(y_train ~., data = data.frame(cbind(fra_train, y_train)), method = "class", model = TRUE)
+  
+  boruta_tree[j] <-  table(predict(tree_model, boruta_test, type = "class"), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  full_tree[j] <-  table(predict(full_tree_model,data.frame(X_test), type = "class"), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  fra_tree[j] <-  table(predict(fra_tree_model,data.frame(fra_test), type = "class"), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  
+  boruta_knn[j] <- table(knn_model, y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  full_knn[j] <- table(full_knn_model, y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  fra_knn[j] <- table(fra_knn_model, y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  
+  boruta_svm[j] <- table(predict(svm_model, data.matrix(boruta_test)), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  full_svm[j] <- table(predict(full_svm_model, data.matrix(X_test)), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  fra_svm[j] <- table(predict(fra_svm_model, data.matrix(fra_test)), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  
+  boruta_rf[j] <- table(predict(rf_model, boruta_test), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  full_rf[j] <- table(predict(full_rf_model, X_test), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  fra_rf[j] <- table(predict(fra_rf_model, fra_test), y_test) %>% diag %>% sum %>% `/`(length(y_test))
+  
+  
+  f1b_knn[j] <- F1_Score(y_test, knn_model)
+  f1b_svm[j] <- F1_Score(y_test, predict(svm_model, data.matrix(boruta_test)))
+  f1b_rf[j] <- F1_Score(y_test, predict(rf_model, boruta_test))
+  f1b_tree[j] <- F1_Score(y_test, predict(tree_model, boruta_test, type = "class")) 
+  
+  f1_knn[j] <- F1_Score(y_test, full_knn_model)
+  f1_svm[j] <- F1_Score(y_test, predict(full_svm_model, data.matrix(X_test)))
+  f1_rf[j] <- F1_Score(y_test, predict(full_rf_model, X_test))
+  f1_tree[j] <- F1_Score(y_test, predict(full_tree_model, data.frame(X_test), type = "class"))
+  
+  f1f_knn[j] <- F1_Score(y_test, fra_knn_model)
+  f1f_svm[j] <- F1_Score(y_test, predict(fra_svm_model, data.matrix(fra_test)))
+  f1f_rf[j] <- F1_Score(y_test, predict(fra_rf_model, fra_test))
+  f1f_tree[j] <- F1_Score(y_test, predict(fra_tree_model, fra_test, type = "class"))
+  
+  
+  rb_knn[j] <- Recall(y_test, knn_model)
+  rb_svm[j] <- Recall(y_test, predict(svm_model, data.matrix(boruta_test)))
+  rb_rf[j] <- Recall(y_test, predict(rf_model, boruta_test))
+  rb_tree[j] <- Recall(y_test, predict(tree_model, boruta_test, type = "class")) 
+  
+  r_knn[j] <- Recall(y_test, full_knn_model)
+  r_svm[j] <- Recall(y_test, predict(full_svm_model, data.matrix(X_test)))
+  r_rf[j] <- Recall(y_test, predict(full_rf_model, X_test))
+  r_tree[j] <- Recall(y_test, predict(full_tree_model, data.frame(X_test), type = "class"))
+  
+  rf_knn[j] <- Recall(y_test, fra_knn_model)
+  rf_svm[j] <- Recall(y_test, predict(fra_svm_model, data.matrix(fra_test)))
+  rf_rf[j] <- Recall(y_test, predict(fra_rf_model, fra_test))
+  rf_tree[j] <- Recall(y_test, predict(fra_tree_model, fra_test, type = "class"))
+  
+  print(paste("--", j, " fold finished for", j, "repeat in", as.numeric(Sys.time() - fold_time), "secs"))
+}  
+  
+boxplot(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, names = c("knn", "svm", "rf", "tree", "bknn", "bsvm", "brf", "btree", "fknn", "fsvm", "frf", "ftree"), horizontal = TRUE, xlab = "Accuracy")
+
+save(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, 
+     f1_knn, f1_svm, f1_rf, f1_tree, f1b_knn, f1b_svm, f1b_rf, f1b_tree, f1f_knn, f1f_svm, f1f_rf, f1f_tree,
+     r_knn, r_svm, r_rf, r_tree, rb_knn, rb_svm, rb_rf, rb_tree, rf_knn, rf_svm, rf_rf, rf_tree,
+     file = "10_fold_res.Rdata")
+```
+
+```{r}
+# comparing scores of random forest and decision tree
+cbind(boruta_rf, rb_rf, f1b_rf)
+cbind(boruta_tree, rb_tree, f1b_tree)
+```
+
 
 
 
