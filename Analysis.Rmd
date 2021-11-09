@@ -63,19 +63,19 @@ library(kableExtra)
 ```
 
 The research question we are aiming to answer is:
-“Can we build a model based on age, gender, diet and lifestyle factors which predicts levels of cardiovascular risk?"
+**“Can we build a model based on age, gender, diet and lifestyle factors which predicts levels of cardiovascular risk?"**
 
-# Data Description
+## Data Description
 The provided data is from Australian Health Survey, National Health Survey 2011-2012, and National Nutrition and Physical Activity Survey 2011-2012. The data are divided into three datasets namely Biomedical Level Data items, Nutrient Level Data Items and Food Level Data Items. The information available includes household information, demographics, self-assessed measurements, food and nutrient intakes, physical activities, blood tests, and other relevant factors. The survey is based off the whole Australia and people are free to decide whether to take the survey and conduct the health tests.
 
-# Data cleaning
-The raw data was first converted to technically correct data by cleaning and filling in the variable names to be human readable, removing empty rows and getting the correct data types for each variable. This *tech_data.Rdata* file is obtained from the STAT3888 coordinator's cleaning code. Here, we imported the file as it is to maximise its usage before we continue to process the data to obtain consistent data that is suitable for further analysis, modelling and prediction.
+## Data cleaning
+The raw data was first converted to technically correct data by cleaning and filling in the variable names to be human readable, removing empty rows and getting the correct data types for each variable. This **tech_data.Rdata** file is obtained from the STAT3888 coordinator's cleaning code. Here, we imported the file as it is to maximise its usage before we continue to process the data to obtain consistent data that is suitable for further analysis, modelling and prediction.
 ```{r}
 # load technically correct data
 load("tech_data.Rdata")
 ```
 
-# Calculating Framingham score
+## Calculating Framingham score
 From the formula provided by the nutrition team, we used the technically correct data to calculate the Framingham score. The Framingham score is a cardiovascular disease risk assessment tool. The calculation includes an individual's age, sex, total cholesterol level, HDL cholesterol level, systolic blood pressure, smoking status and siabetes status. Since the data available in our dataset is in terms of ranges, we cannot calculate the score directly. 
 
 Instead, we calculated the CVD Points for men and women based on the score sheet provided that arranges individuals to different CVD points associated with different ranges of these factors included. Then, according to the study paper, we assigned the CVD Points to their corresponding risk percentage. With this, we classified the individuals into low, medium and high risk groups which will be easier for modelling. 
@@ -361,7 +361,7 @@ dat <- dat %>% filter(AGEC >= 45, !is.na(cvd_class))
 dat$cvd_class <- as.factor(dat$cvd_class)
 ```
 
-# Further processing of data
+## Further processing of data
 After calculating the CVD Points and obtaining the CVD classes, it is time to process the data to have it ready for analysis. Since we are analysing the possibility to predict the levels of risk using lifestyle factors, we need to use data from food dataset too. So, we selected only food variables that are in grams and took the median values for each of these variables. 
 ```{r}
 # handle variables from food dataset in grams
@@ -434,6 +434,9 @@ sum(unlist(lapply(biom_food_scaled %>% select_if(is.numeric), skewness)))
 # remove highly correlated variables
 cor_90 <- findCorrelation(cor(biom_food_scaled %>% select_if(is.numeric)), names = TRUE)
 biom_food_scaled <- biom_food_scaled %>% select(-all_of(cor_90))
+
+# saving biom_food_scaled for future reference
+save(biom_food_scaled, file = "combined_df.Rdata")
 ```
 
 By completing the processing of data, we keep all the variables required for easy reference later on.
@@ -444,7 +447,7 @@ biom_vars <- setdiff(colnames(biom_food_scaled), food_vars) #including cvd class
 fra_vars <- c("AGEC", "SEX", "DIABBC", "SMKSTAT")
 ```
 
-# Analysis of Models' Performance
+## Analysis of Models' Performances
 With the data ready for analysis, we decide to try different models and evaluate their performances. Since our problem is a classification one and a supervised learning algorithm is needed, we applied the dataset to K-nearest neighbour, Support vector machine, Decision tree and Random forest. Additionally, due to large number of variables, we performed Boruta feature selection to choose variables that provide the most information to the models. This then reduces the issue of curse of dimensionality which can lead to overfitting. 
 
 We then performed 10-fold cross validation to evaluate the different models with and without feature selection and compare their performances. The accuracy values of each fold are recorded and kept into dataframe.
@@ -458,7 +461,9 @@ cvSets <- cvTools::cvFolds(nrow(X), cvK)  # permute all the data, into 5 folds
 boruta_knn <- boruta_svm <- boruta_rf <- boruta_tree <- full_knn <- full_svm <- full_rf <- full_tree <- fra_knn <- fra_svm <- fra_rf <- fra_tree<- NA  # initialise results vector
 f1b_knn <- f1b_svm <- f1b_rf <- f1b_tree <- f1_knn <- f1_svm <- f1_rf <- f1_tree <- f1f_knn <- f1f_svm <- f1f_rf <- f1f_tree <- NA  # initialise results vector
 rb_knn <- rb_svm <- rb_rf <- rb_tree <- r_knn <- r_svm <- r_rf <- r_tree <- rf_knn <- rf_svm <- rf_rf <- rf_tree <- NA  # initialise results vector
+```
 
+```{r, eval = FALSE}
 # 10-fold cross validation (with and without boruta feature selection)
 for (j in 1:cvK) {
   fold_time <-Sys.time()
@@ -579,24 +584,28 @@ for (j in 1:cvK) {
   print(paste("--", j, " fold finished for", j, "repeat in", as.numeric(Sys.time() - fold_time), "secs"))
 }  
 
-# saving the accuracy values from 10-fold cross validation for different models
+# saving the accuracy, recall and f1 values from 10-fold cross validation for different models
 save(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, 
      f1_knn, f1_svm, f1_rf, f1_tree, f1b_knn, f1b_svm, f1b_rf, f1b_tree, f1f_knn, f1f_svm, f1f_rf, f1f_tree,
      r_knn, r_svm, r_rf, r_tree, rb_knn, rb_svm, rb_rf, rb_tree, rf_knn, rf_svm, rf_rf, rf_tree,
      file = "10_fold_res.Rdata")
 ```
 
-# Visualisation
 The boxplot of the accuracy of each model is plotted and compared. The random forest and decision tree algorithms with feature selection seem to work best. 
 
 Then, we saved the accuracy values of these different models and the two chosen models separately as tables.
 ```{r}
+# load file containing scores from 10-fold CV 
+load("10_fold_res.Rdata")
+
 # boxplot of different models' accuracy
 boxplot(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, names = c("knn", "svm", "rf", "tree", "bknn", "bsvm", "brf", "btree", "fra_knn", "fra_svm", "fra_rf", "fra_tree"), horizontal = TRUE, xlab = "Accuracy")
 
 # saving the accuracy values separately as tables
 tibble(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree) %>%
 write_csv("tmp1.csv")
+
+# saving F1 score and recall for decision tree and random forest
 tibble(f1_rf, f1_tree) %>% write_csv("tmp2.csv")
 tibble(r_rf, r_tree) %>% write_csv("tmp3.csv")
 ```
@@ -615,46 +624,27 @@ c(mean(fra_tree), mean(full_tree), mean(boruta_tree))
 boxplot(full_rf, full_tree, boruta_rf, boruta_tree, fra_rf, fra_tree, names = c("rf", "tree", "brf", "btree", "frf", "ftree"), horizontal = TRUE, xlab = "Accuracy")
 ```
 
-# Building final model (decision tree) with Boruta feature selection
+## Building final model (decision tree) with Boruta feature selection
 Taking into consideration the overall performance, decision tree with Boruta feature selection is used. Here, we run the feature selection and keep the selected variables into a dataframe. 
+```{r, eval = FALSE}
+# selecting variables using Boruta feature selection and saving the result
+boruta_result <- Boruta(cvd_class~., data = biom_food_scaled, maxRuns = 500, doTrace = 1)
+save(boruta_result, file = "borutaresult.Rdata")
+```
+
 ```{r}
-boruta <- Boruta(cvd_class~., data = biom_food_scaled, maxRuns = 500, doTrace = 1)
-boruta_fixed <- TentativeRoughFix(boruta)
-boruta_vars <- getSelectedAttributes(boruta_fixed)
+# load file containing boruta feature selection result
+load("borutaresult.Rdata")
+
+# obtaining variables selected from Boruta
+boruta_final_fixed <- TentativeRoughFix(boruta_result)
+boruta_final_vars <- getSelectedAttributes(boruta_final_fixed)
 ```
 
 We split the data into two sets: training and test. Then, the model is trained with the selected variables. The test set is used to test the model and analyse how good it predicts the different CVD classes. The decision tree is then built and visualised. As the tree is complex, we prune the tree according to the cp value which gives the best model.
 ```{r}
-boruta_vars = c(
-  "BMISC",
-  "AGEC",
-  "PHDCMWBC",
-  "INCDEC",
-  "DIABBC",
-  "SEX",
-  "SMKDAILY",
-  "SMKSTAT",
-  "PROTEIN",
-  "FIBRE",
-  "PROVITA",
-  "RETEQV",
-  "B1MG",
-  "B2MG",
-  "B3MG",
-  "NIACINEQ",
-  "CALMG",
-  "IRONMG",
-  "MAGMG",
-  "PHOSMG",
-  "POTASMG",
-  "SELUG",
-  "ZINCMG",
-  "SFAG",
-  "MUFAG",
-  "LAG"
-)
-
-length(boruta_vars)
+# checking number of variables selected
+length(boruta_final_vars)
 
 # split dataset into training and test set
 X <- data.matrix(biom_food_scaled%>% select(-cvd_class))
@@ -667,26 +657,23 @@ y_test <- y[test_id]
 y_train <- y[-test_id]
 
 # train and test model with selected variables
-boruta_train <- data.frame(X_train) %>% select(boruta_vars, all_of(fra_vars))
-boruta_test <- data.frame(X_test) %>% select(boruta_vars, all_of(fra_vars))
+boruta_train <- data.frame(X_train) %>% select(boruta_final_vars, all_of(fra_vars))
+boruta_test <- data.frame(X_test) %>% select(boruta_final_vars, all_of(fra_vars))
 
 # build decision tree
-tree_model <- rpart(cvd_class ~., data = biom_food_scaled %>% select(boruta_vars, cvd_class), method = "class", model = TRUE, control = rpart.control(cp=0.005))
+tree_model <- rpart(cvd_class ~., data = biom_food_scaled %>% select(boruta_final_vars, cvd_class), method = "class", model = TRUE, control = rpart.control(cp=0.005))
 rpart.plot(tree_model)
 ```
 
-# Asides
+## Asides
 This is a version where we renamed the variables to be more understandable. It can then be used for better visualisation and tabulation of data.
 ```{r}
 # renaming variables to be more readable for visualisation
-boruta_final_fixed <- TentativeRoughFix(boruta_result)
-boruta_final_vars <- getSelectedAttributes(boruta_final_fixed)
-
 tree_variables <- data.frame(biom_food_scaled %>% select(boruta_final_vars))
 
-clearer_names <- rename(data.frame(biom_food_scaled %>% select(boruta_final_vars)), c("BMISC" = "BMI", "AGEC" = "Age", "PHDCMWBC" = "Waist_circumference", "INCDEC" = "Equivalised_Income(deciles)", "DIABBC" = "Whether_has_diabetes_mellitus", "SEX" = "Sex", "SMKDAILY" = "Daily_smoker_status", "SMKSTAT" = "Smoker_status", "PROTEIN" = "Protein", "FIBRE" = "Dietary_Fibre", "PROVITA" = "Pro-vitamin_A", "RETEQV" = "Retinol_equivalents", "B1MG" = "Thiamin_(B1)", "B2MG" = "Riboflavin_(B2)", "B3MG" = "Niacin (B3)", "NIACINEQ" = "Niacin_equivalents", "CALMG" = "Calcium", "IRONMG" = "Iron", "MAGMG" = "Magnesium", "PHOSMG" = "Phosphorous", "POTASMG" = "Potassium", "SELUG" = "Selenium", "ZINCMG" = "Zinc", "SFAG" = "Saturated_fat", "MUFAG" = "Monounsaturated_fat", "LAG" = "Linoleic_acid"))
+clearer_names <- rename(tree_variables, c("BMI" = "BMISC", "Age" = "AGEC", "Waist_circumference" = "PHDCMWBC", "Equivalised_Income(deciles)" = "INCDEC", "Whether_has_diabetes_mellitus" = "DIABBC", "Sex" = "SEX", "Daily_smoker_status" = "SMKDAILY", "Smoker_status" = "SMKSTAT", "Protein" = "PROTEIN", "Dietary_Fibre" = "FIBRE", "Pro-vitamin_A" = "PROVITA", "Retinol_equivalents" = "RETEQV", "Thiamin_(B1)" = "B1MG", "Riboflavin_(B2)" = "B2MG", "Niacin (B3)" = "B3MG", "Niacin_equivalents" = "NIACINEQ", "Calcium" = "CALMG", "Iron" = "IRONMG", "Magnesium" = "MAGMG", "Phosphorous" = "PHOSMG", "Potassium" = "POTASMG", "Selenium" = "SELUG", "Zinc" = "ZINCMG", "Saturated_fat" = "SFAG", "Monounsaturated_fat" = "MUFAG", "Linoleic_acid" = "LAG"))
 ```
 
-To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named *figures*. We have not included the code in this file as we want to avoid having redundant information and the figures are already saved into the folder. We have drawn a flowchart to present the whole process of our analysis. Then, the tables of variables selected and their importance are plotted to have a better understanding of how they impact the response variable. A confusion matrix is also plotted to show how well the model predicts each class. 
+To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named **figures**. We have not included the code in this file as we want to avoid having redundant information and the figures are already saved into the folder. We have drawn a flowchart to present the whole process of our analysis. Then, the tables of variables selected and their importance are plotted to have a better understanding of how they impact the response variable. A confusion matrix is also plotted to show how well the model predicts each class. We have also included a **vis.ipynb** file in the figures folder that include visualisations done with the help of python.
 
 
