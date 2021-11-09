@@ -362,9 +362,9 @@ dat$cvd_class <- as.factor(dat$cvd_class)
 ```
 
 ## Further processing of data
-After calculating the CVD Points and obtaining the CVD classes, it is time to process the data to have it ready for analysis. Since we are analysing the possibility to predict the levels of risk using lifestyle factors, we need to use data from food dataset too. So, we selected only food variables that are in grams and took the median values for each of these variables. 
+After calculating the CVD Points and obtaining the CVD classes, it is time to process the data to have it ready for analysis. Since we are analysing the possibility to predict the levels of risk using lifestyle factors, we need to use data from food dataset too. So, we selected only food variables that are in grams and took the median value of these variables for each individual. 
 ```{r}
-# handle variables from food dataset in grams
+# extract variables in grams from food dataset and calculate the median for each individual
 food_gram_cols <- na.omit(types_food[str_detect(types_food$description, "g$|\\(g\\)$"),]$variable_name)
 food_gram_cols <- intersect(food_gram_cols, colnames(tech_food))
 food_gram <- tech_food %>% select(ABSPID, all_of(food_gram_cols))
@@ -599,7 +599,7 @@ Then, we saved the accuracy values of these different models and the two chosen 
 load("10_fold_res.Rdata")
 
 # boxplot of different models' accuracy
-boxplot(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, names = c("knn", "svm", "rf", "tree", "bknn", "bsvm", "brf", "btree", "fra_knn", "fra_svm", "fra_rf", "fra_tree"), horizontal = TRUE, xlab = "Accuracy")
+boxplot(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree, fra_knn, fra_svm, fra_rf, fra_tree, names = c("full_knn", "full_svm", "full_rf", "full_tree", "boruta_knn", "boruta_svm", "boruta_rf", "boruta_tree", "fra_knn", "fra_svm", "fra_rf", "fra_tree"), las = 2, horizontal = TRUE, xlab = "Accuracy")
 
 # saving the accuracy values separately as tables
 tibble(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, boruta_tree) %>%
@@ -621,7 +621,7 @@ c(mean(fra_rf), mean(full_rf), mean(boruta_rf))
 c(mean(fra_tree), mean(full_tree), mean(boruta_tree))
 
 # boxplot comparing different versions of random forest and decision tree
-boxplot(full_rf, full_tree, boruta_rf, boruta_tree, fra_rf, fra_tree, names = c("rf", "tree", "brf", "btree", "frf", "ftree"), horizontal = TRUE, xlab = "Accuracy")
+boxplot(full_rf, full_tree, boruta_rf, boruta_tree, fra_rf, fra_tree, names = c("rf", "tree", "brf", "btree", "frf", "ftree"), las = 2, horizontal = TRUE, xlab = "Accuracy")
 ```
 
 ## Building final model (decision tree) with Boruta feature selection
@@ -674,6 +674,6 @@ tree_variables <- data.frame(biom_food_scaled %>% select(boruta_final_vars))
 clearer_names <- rename(tree_variables, c("BMI" = "BMISC", "Age" = "AGEC", "Waist_circumference" = "PHDCMWBC", "Equivalised_Income(deciles)" = "INCDEC", "Whether_has_diabetes_mellitus" = "DIABBC", "Sex" = "SEX", "Daily_smoker_status" = "SMKDAILY", "Smoker_status" = "SMKSTAT", "Protein" = "PROTEIN", "Dietary_Fibre" = "FIBRE", "Pro-vitamin_A" = "PROVITA", "Retinol_equivalents" = "RETEQV", "Thiamin_(B1)" = "B1MG", "Riboflavin_(B2)" = "B2MG", "Niacin (B3)" = "B3MG", "Niacin_equivalents" = "NIACINEQ", "Calcium" = "CALMG", "Iron" = "IRONMG", "Magnesium" = "MAGMG", "Phosphorous" = "PHOSMG", "Potassium" = "POTASMG", "Selenium" = "SELUG", "Zinc" = "ZINCMG", "Saturated_fat" = "SFAG", "Monounsaturated_fat" = "MUFAG", "Linoleic_acid" = "LAG"))
 ```
 
-To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named **figures**. We have not included the code in this file as we want to avoid having redundant information and the figures are already saved into the folder. We have drawn a flowchart to present the whole process of our analysis. Then, the tables of variables selected and their importance are plotted to have a better understanding of how they impact the response variable. A confusion matrix is also plotted to show how well the model predicts each class. We have also included a **vis.ipynb** file in the figures folder that include visualisations done with the help of python.
+To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named **figures**. We have not included the code in this file as we want to avoid having redundant information and the figures are already saved into the folder. We have drawn a flowchart to present the whole process of our analysis. Then, the tables of variables selected and their importance are plotted to have a better understanding of how they impact the response variable. A confusion matrix is also plotted to show how well the model predicts each class. We have also included a **vis.ipynb** file in the figures folder that include visualisations done with the help of python which has been converted into **vis.rmd** to facilitate the code reading in R.
 
 
