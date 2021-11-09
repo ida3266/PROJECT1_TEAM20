@@ -593,7 +593,7 @@ save(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, 
 
 The boxplot of the accuracy of each model is plotted and compared. The random forest and decision tree algorithms with feature selection seem to work best. 
 
-Then, we saved the accuracy values of these different models and the two chosen models separately as tables.
+Then, we saved the accuracy values of these different models and the two chosen models separately as tables into csv files. These files are used in python to generate visualisations.
 ```{r}
 # load file containing scores from 10-fold CV 
 load("10_fold_res.Rdata")
