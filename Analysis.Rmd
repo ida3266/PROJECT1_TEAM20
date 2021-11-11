@@ -65,8 +65,10 @@ library(kableExtra)
 The research question we are aiming to answer is:
 **“Can we build a model based on age, gender, diet and lifestyle factors which predicts levels of cardiovascular risk?"**
 
+We aim to try different models on the data to predict the levels of cardiovascular risk and find which model is the best. Then, with the final model, we decide whether it is possible to answer the research question. This is done, however, after we have completed data cleaning and data preprocessing to ensure that the model outcome is accurate and reliable enough to drive possible conclusions.
+
 ## Data Description
-The provided data is from Australian Health Survey, National Health Survey 2011-2012, and National Nutrition and Physical Activity Survey 2011-2012. The data are divided into three datasets namely Biomedical Level Data items, Nutrient Level Data Items and Food Level Data Items. The information available includes household information, demographics, self-assessed measurements, food and nutrient intakes, physical activities, blood tests, and other relevant factors. The survey is based off the whole Australia and people are free to decide whether to take the survey and conduct the health tests.
+The provided data is from Australian Health Survey, National Health Survey 2011-2012, and National Nutrition and Physical Activity Survey 2011-2012. The data are divided into three datasets namely Biomedical Level Data items, Nutrient Level Data Items and Food Level Data Items. The information available includes household information, demographics, self-assessed measurements, food and nutrient intakes, physical activities, blood tests, and other relevant factors. The survey is based off the whole Australian population and people are free to decide whether to take the survey and conduct the health tests. There are 31,837 observations in total. 
 
 ## Data cleaning
 The raw data was first converted to technically correct data by cleaning and filling in the variable names to be human readable, removing empty rows and getting the correct data types for each variable. This **tech_data.Rdata** file is obtained from the STAT3888 coordinator's cleaning code. Here, we imported the file as it is to maximise its usage before we continue to process the data to obtain consistent data that is suitable for further analysis, modelling and prediction.
@@ -76,11 +78,11 @@ load("tech_data.Rdata")
 ```
 
 ## Calculating Framingham score
-From the formula provided by the nutrition team, we used the technically correct data to calculate the Framingham score. The Framingham score is a cardiovascular disease risk assessment tool. The calculation includes an individual's age, sex, total cholesterol level, HDL cholesterol level, systolic blood pressure, smoking status and siabetes status. Since the data available in our dataset is in terms of ranges, we cannot calculate the score directly. 
+From the formula provided by the nutrition team, we used the technically correct data to calculate the Framingham score. The Framingham score is a cardiovascular disease risk assessment tool. The calculation includes an individual's age, sex, total cholesterol level, HDL cholesterol level, systolic blood pressure, smoking status and diabetes status. Since the data available in our dataset is in ranges, we cannot calculate the score directly. 
 
 Instead, we calculated the CVD Points for men and women based on the score sheet provided that arranges individuals to different CVD points associated with different ranges of these factors included. Then, according to the study paper, we assigned the CVD Points to their corresponding risk percentage. With this, we classified the individuals into low, medium and high risk groups which will be easier for modelling. 
 
-Moreover, as there exist class imbalance due to majority of younger groups being in the low risk class, we only included people with age greater than 45. This provides a better class balance that prevents future modelling to be unreliable and innacurate. Also, this chosen age limit follows the nutritional theory where this is the recommended age for the first heart health check.
+Moreover, as there exist class imbalance due to majority of younger groups being in the low risk class, and according to recommendation of The Heart Foundation, we only included people with age greater than 45. This is the recommended age for the first heart check. Also, this provides a better class balance that prevents potential errors and problems that may occur in future modelling. It prevents the model from being inaccurate and biased. 
 
 When calculating the CVD Points, we had to perform several conditioning procedure to assign different points for different sex, age, tests results, smoking status and diabetes status. 
 ```{r}
@@ -293,7 +295,7 @@ dat <- dat %>%
 dat$CVD_Point = apply(tech_biom, 1, cvd_wrapper)
 
 # how many CVD Point available
-table(is.na(dat$CVD_Point))
+# table(is.na(dat$CVD_Point))
 ```
 
 ```{r}
@@ -407,7 +409,7 @@ biom_food_cleaned <- biom_food_cleaned %>% select(-c(DIETQ12, DIETQ14))
 biom_food_cleaned <- drop_na(biom_food_cleaned)
 ```
 
-Next, we visualise the skewness of the data to make sure that it satisfies model assumptions. From the graph, we can see there are many variables that are heavily skewed. Hence, we take the log transformation of these numerical variables to obtain Gaussian distributions and to allow us standardise the values to bring them onto the same scale. This is done to ensure the model performs well and uses the information to the most. Highly correlated variables are also removed as it will bias the outcome by causing multicollinearity.
+Next, we visualised the skewness of the data to make sure that it satisfies model assumptions. From the graph, we can see there are many variables that are positively skewed. Hence, we take the log transformation of these numerical variables to obtain Gaussian distributions and to allow us standardise the values to bring them onto the same scale. This is done to ensure the model performs well and uses the information to the most. Highly correlated variables are also removed as it will bias the outcome by causing multicollinearity.
 ```{r}
 # visualize skewness of data
 skew_before_log <- sort(unlist(lapply(biom_food_cleaned %>% select_if(is.numeric), skewness)), decreasing = TRUE)
@@ -439,18 +441,18 @@ biom_food_scaled <- biom_food_scaled %>% select(-all_of(cor_90))
 save(biom_food_scaled, file = "combined_df.Rdata")
 ```
 
-By completing the processing of data, we keep all the variables required for easy reference later on.
+Completing the processing of data, we keep all the variables required for easy reference later on.
 ```{r}
 # extract variables for each dataset for later use
-food_vars <- intersect(colnames(food_gram_median), colnames(biom_food_cleaned))
-biom_vars <- setdiff(colnames(biom_food_scaled), food_vars) #including cvd class
-fra_vars <- c("AGEC", "SEX", "DIABBC", "SMKSTAT")
+food_vars <- intersect(colnames(food_gram_median), colnames(biom_food_cleaned)) 
+biom_vars <- setdiff(colnames(biom_food_scaled), food_vars) # including cvd class
+fra_vars <- c("AGEC", "SEX", "DIABBC", "SMKSTAT") # variables found in framingham score
 ```
 
 ## Analysis of Models' Performances
-With the data ready for analysis, we decide to try different models and evaluate their performances. Since our problem is a classification one and a supervised learning algorithm is needed, we applied the dataset to K-nearest neighbour, Support vector machine, Decision tree and Random forest. Additionally, due to large number of variables, we performed Boruta feature selection to choose variables that provide the most information to the models. This then reduces the issue of curse of dimensionality which can lead to overfitting. 
+With the data ready for analysis, we decided to try different models and evaluated their performances. Since our problem is a classification one and a supervised learning algorithm is needed, we applied the dataset to K-nearest neighbour, Support vector machine, Decision tree and Random forest. Additionally, due to large number of variables, we performed Boruta feature selection to choose variables that provide the most information to the models. This then reduces the issue of curse of dimensionality which can lead to overfitting.
 
-We then performed 10-fold cross validation to evaluate the different models with and without feature selection and compare their performances. The accuracy values of each fold are recorded and kept into dataframe.
+We performed 10-fold cross validation to evaluate the different models with and without feature selection and compare their performances. The accuracy values of each fold are recorded and kept into a dataframe.
 ```{r}
 set.seed(123) # set seed
 
@@ -591,9 +593,9 @@ save(full_knn, full_svm, full_rf, full_tree, boruta_knn, boruta_svm, boruta_rf, 
      file = "10_fold_res.Rdata")
 ```
 
-The boxplot of the accuracy of each model is plotted and compared. The random forest and decision tree algorithms with feature selection seem to work best. 
+The boxplot of the accuracy of each model is plotted and compared. The plot includes boxplots of models with full variables without feature selction, models with variables after feature selection and models with only variables found in Framingham score. A refined version is later produced for the report. The random forest and decision tree algorithms with feature selection seem to work best. 
 
-Then, we saved the accuracy values of these different models and the two chosen models separately as tables into csv files. These files are used in python to generate visualisations.
+Then, we saved the different score of these different models and the two best-performing models separately as tables into csv files. These files are used in python to generate visualisations.
 ```{r}
 # load file containing scores from 10-fold CV 
 load("10_fold_res.Rdata")
@@ -610,9 +612,9 @@ tibble(f1_rf, f1_tree) %>% write_csv("tmp2.csv")
 tibble(r_rf, r_tree) %>% write_csv("tmp3.csv")
 ```
 
-Given that the accuracy of the models are not excellent, we also tried other versions of the two models: random forest and desion tree. The three versions are differentiated by the dataset applied to the models. We tried the performances with dataset containing only age, sex, smoking status and diabetes status, then with full dataset containing age, sex, status variables, diet and lifestyle variables, lastly with dataset containing variables selected by Boruta feature selection. A graph of boxplots is also drawn to compare the accuracies.
+Given that the accuracy of the models are not excellent, we also tried other versions of the two models: random forest and desion tree. The three versions are differentiated by the dataset applied to the models. We tried the performances with dataset containing only variables found in the risk score, then with full dataset containing age, sex, status variables, diet and lifestyle variables, lastly with dataset containing variables selected by Boruta feature selection. A graph of boxplots of the three versions of the two models is also drawn to compare the accuracies further. Later on, a table is produced to present the numbers of the scores more clearly (included in report).
 
-Decision tree appears to perform the best. Thus, it is selected as the final model. 
+Decision tree appears to perform the best from the statistic. Thus, it is selected as the final model. 
 ```{r}
 # mean of accuracy of different versions of random forest
 c(mean(fra_rf), mean(full_rf), mean(boruta_rf))
@@ -641,7 +643,7 @@ boruta_final_fixed <- TentativeRoughFix(boruta_result)
 boruta_final_vars <- getSelectedAttributes(boruta_final_fixed)
 ```
 
-We split the data into two sets: training and test. Then, the model is trained with the selected variables. The test set is used to test the model and analyse how good it predicts the different CVD classes. The decision tree is then built and visualised. As the tree is complex, we prune the tree according to the cp value which gives the best model.
+We split the data into two sets: training and test. Then, the model is trained with the selected variables. The test set is used to test the model and analyse how good it predicts the different CVD classes. The decision tree is then built and visualised. As the tree is complex, we prune the tree according to the cp value which gives the best model. This decision tree is then recreated manually by the nutrition team to have it clearer and more interpretable. The variable importance of the variables in the tree is also outputted to have some inference. Additionally, to analyse the outcome more in depth, the rule of classification is extracted to learn more about whether the model and the theory match.
 ```{r}
 # checking number of variables selected
 length(boruta_final_vars)
@@ -665,15 +667,7 @@ tree_model <- rpart(cvd_class ~., data = biom_food_scaled %>% select(boruta_fina
 rpart.plot(tree_model)
 ```
 
-## Asides
-This is a version where we renamed the variables to be more understandable. It can then be used for better visualisation and tabulation of data.
-```{r}
-# renaming variables to be more readable for visualisation
-tree_variables <- data.frame(biom_food_scaled %>% select(boruta_final_vars))
+To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named **figures**. The visualisations are created using different techniques and platforms so they are all included in the folder readily used. We have drawn a flowchart to present the whole process (one for data preprocessing and one for model training) of our analysis. Then, the table of variables selected and their importance is created to have a better understanding of how they impact the response variable in the decision tree. A confusion matrix is also plotted to show how well the model predicts each class. We have also included a **vis.ipynb** file in the figures folder that include visualisations done with the help of python which has been converted into **vis.rmd** to facilitate the code reading in R. Lastly, we also have the decision tree drawn for better interpretation and understand how the tree does the classification process.
 
-clearer_names <- rename(tree_variables, c("BMI" = "BMISC", "Age" = "AGEC", "Waist_circumference" = "PHDCMWBC", "Equivalised_Income(deciles)" = "INCDEC", "Whether_has_diabetes_mellitus" = "DIABBC", "Sex" = "SEX", "Daily_smoker_status" = "SMKDAILY", "Smoker_status" = "SMKSTAT", "Protein" = "PROTEIN", "Dietary_Fibre" = "FIBRE", "Pro-vitamin_A" = "PROVITA", "Retinol_equivalents" = "RETEQV", "Thiamin_(B1)" = "B1MG", "Riboflavin_(B2)" = "B2MG", "Niacin (B3)" = "B3MG", "Niacin_equivalents" = "NIACINEQ", "Calcium" = "CALMG", "Iron" = "IRONMG", "Magnesium" = "MAGMG", "Phosphorous" = "PHOSMG", "Potassium" = "POTASMG", "Selenium" = "SELUG", "Zinc" = "ZINCMG", "Saturated_fat" = "SFAG", "Monounsaturated_fat" = "MUFAG", "Linoleic_acid" = "LAG"))
-```
-
-To get a better idea of the process, the model and the variables, we have done several visualisations which are included in the folder named **figures**. We have not included the code in this file as we want to avoid having redundant information and the figures are already saved into the folder. We have drawn a flowchart to present the whole process of our analysis. Then, the tables of variables selected and their importance are plotted to have a better understanding of how they impact the response variable. A confusion matrix is also plotted to show how well the model predicts each class. We have also included a **vis.ipynb** file in the figures folder that include visualisations done with the help of python which has been converted into **vis.rmd** to facilitate the code reading in R.
-
+We have also included the file where we did some manual calculations to obtain the original values of the variables instead of the scaled ones in the rule of decision tree. The file is named **Variable Conversion Table.xlsx**.
 
